@@ -1,0 +1,5 @@
+discord
+configparser
+numpy
+tensorflow
+tensorflow_datasets

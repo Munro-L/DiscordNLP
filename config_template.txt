@@ -1,4 +1,4 @@
 [DEFAULT]
-client_id = 
-client_secret = 
 client_token = 
+model_path = 
+tokenizer_path = 
