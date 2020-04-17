@@ -14,11 +14,15 @@ try:
     config.read("config.txt")
 except:
     print("[!!] Error: config.txt could not be read. Fill out config_template.txt and rename it to config.txt.")
-print("[*] Loading pre-trained CNN model from: {0}".format(config["DEFAULT"]["model_path"]))
-cnn_model = tf.keras.models.load_model(config["DEFAULT"]["model_path"])
 print("[*] Loading volcabulary tokenizer from: {0}".format(config["DEFAULT"]["tokenizer_path"]))
 with open(config["DEFAULT"]["tokenizer_path"], "rb") as f:
     tokenizer = pickle.load(f)
+
+tokenizer = pickle.load(open("models/tokenizer.pickle", "rb"))
+interperter = tf.lite.Interpreter(model_path="models/converted_big_model.tflite")
+interperter.allocate_tensors()
+input_details = interperter.get_input_details()
+output_details = interperter.get_output_details()
 
 
 # async def cnn_response(text):
@@ -26,7 +30,13 @@ with open(config["DEFAULT"]["tokenizer_path"], "rb") as f:
 
 
 async def measure_sentiment(text):
-    sentiment = cnn_model(np.array([tokenizer.encode(text)]), training=False).numpy()
+    tokenized_input = np.array([tokenizer.encode(text)], dtype=np.int32)
+    tokenized_input = tf.keras.preprocessing.sequence.pad_sequences(
+        tokenized_input, value=0, padding="post", maxlen=73
+    )
+    interperter.set_tensor(input_details[0]["index"], tokenized_input)
+    interperter.invoke()
+    sentiment = interperter.get_tensor(output_details[0]["index"])
     return sentiment
 
 
@@ -39,18 +49,12 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
-    if message.content.startswith("$reply"):
-        async for x in message.channel.history(limit=2):
-            target_message = x
-        if target_message != None:
-            reply = await cnn_response(target_message.content)
-            await message.channel.send(target_message.content)
     elif message.content.startswith("$sentiment"):
         async for x in message.channel.history(limit=2):
             target_message = x
         if target_message != None:
             sentiment = await measure_sentiment(target_message.content)
-            await message.channel.send(str(sentiment))     
+            await message.channel.send("Score: {0}".format(sentiment[0][0]))   
 
 
 client.run(config["DEFAULT"]["client_token"])

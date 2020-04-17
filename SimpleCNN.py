@@ -12,7 +12,7 @@ import tensorflow_datasets as tfds
 
 cols = ["sentiment", "text"]
 train_data = pandas.read_csv(
-    "data/training_data_short.csv",
+    "data/training_data_long.csv",
     header=None,
     names=cols,
     engine="python",
@@ -49,55 +49,56 @@ train_inputs = np.delete(data_input, test_idx, axis=0)
 train_labels = np.delete(data_labels, test_idx)
 
 
-# class DCNN(tf.keras.Model):  
-#     def __init__(self,
-#                  vocab_size,
-#                  emb_dim=128,
-#                  nb_filters=50,
-#                  FFN_units=512,
-#                  nb_classes=2,
-#                  dropout_rate=0.1,
-#                  training=False,
-#                  name="dcnn"):
-#         super(DCNN, self).__init__(name=name)
+class DCNN(tf.keras.Model):  
+    def __init__(self,
+                 vocab_size,
+                 emb_dim=128,
+                 nb_filters=50,
+                 FFN_units=512,
+                 nb_classes=2,
+                 dropout_rate=0.1,
+                 training=False,
+                 name="dcnn"):
+        super(DCNN, self).__init__(name=name)
         
-#         self.embedding = layers.Embedding(vocab_size, emb_dim)
-#         self.bigram = layers.Conv1D(filters=nb_filters,
-#                                     kernel_size=2,
-#                                     padding="valid",
-#                                     activation="relu")
-#         self.trigram = layers.Conv1D(filters=nb_filters,
-#                                      kernel_size=3,
-#                                      padding="valid",
-#                                      activation="relu")
-#         self.fourgram = layers.Conv1D(filters=nb_filters,
-#                                       kernel_size=4,
-#                                       padding="valid",
-#                                       activation="relu")
-#         self.pool = layers.GlobalMaxPool1D() # no training variable so we can
-#                                              # use the same layer for each
-#                                              # pooling step
-#         self.dense_1 = layers.Dense(units=FFN_units, activation="relu")
-#         self.dropout = layers.Dropout(rate=dropout_rate)
-#         if nb_classes == 2:
-#             self.last_dense = layers.Dense(units=1, activation="sigmoid")
-#         else:
-#             self.last_dense = layers.Dense(units=nb_classes, activation="softmax")
-
-
-#     def call(self, inputs, training):
-#         x = self.embedding(inputs)
-#         x_1 = self.bigram(x)
-#         x_1 = self.pool(x_1)
-#         x_2 = self.trigram(x)
-#         x_2 = self.pool(x_2)
-#         x_3 = self.fourgram(x)
-#         x_3 = self.pool(x_3)
-#         merged = tf.concat([x_1, x_2, x_3], axis=-1) # (batch_size, 3 * nb_filters)
-#         merged = self.dense_1(merged)
-#         merged = self.dropout(merged, training)
-#         output = self.last_dense(merged)
-#         return output
+        self.embedding = layers.Embedding(vocab_size, emb_dim)
+        self.bigram = layers.Conv1D(filters=nb_filters,
+                                    kernel_size=2,
+                                    padding="valid",
+                                    activation="relu")
+        self.trigram = layers.Conv1D(filters=nb_filters,
+                                     kernel_size=3,
+                                     padding="valid",
+                                     activation="relu")
+        self.fourgram = layers.Conv1D(filters=nb_filters,
+                                      kernel_size=4,
+                                      padding="valid",
+                                      activation="relu")
+        self.pool = layers.GlobalMaxPool1D() # no training variable so we can
+                                             # use the same layer for each
+                                             # pooling step
+        self.dense_1 = layers.Dense(units=FFN_units, activation="relu")
+        self.dropout = layers.Dropout(rate=dropout_rate)
+        if nb_classes == 2:
+            self.last_dense = layers.Dense(units=1, activation="sigmoid")
+        else:
+            self.last_dense = layers.Dense(units=nb_classes, activation="softmax")
+    
+    def call(self, inputs, training):
+        x = self.embedding(inputs)
+        x_1 = self.bigram(x)
+        x_1 = self.pool(x_1)
+        x_2 = self.trigram(x)
+        x_2 = self.pool(x_2)
+        x_3 = self.fourgram(x)
+        x_3 = self.pool(x_3)
+        
+        merged = tf.concat([x_1, x_2, x_3], axis=-1) # (batch_size, 3 * nb_filters)
+        merged = self.dense_1(merged)
+        merged = self.dropout(merged, training)
+        output = self.last_dense(merged)
+        
+        return output
 
 VOCAB_SIZE = tokenizer.vocab_size
 EMB_DIM = 200
@@ -119,27 +120,28 @@ NB_EPOCHS = 5
 # Dcnn.add(layers.Dense(units=NB_CLASSES, activation="softmax"))
 
 
-embedding = layers.Embedding(input_dim=VOCAB_SIZE, output_dim=128)
-pool = layers.GlobalMaxPool1D()
-dense = layers.Dense(units=NB_CLASSES, activation="softmax")
-dropout = layers.Dropout(rate=DROPOUT_RATE)
+# embedding = layers.Embedding(input_dim=VOCAB_SIZE, output_dim=128)
+# pool = layers.GlobalMaxPool1D()
+# dense = layers.Dense(units=NB_CLASSES, activation="softmax")
+# dropout = layers.Dropout(rate=DROPOUT_RATE)
 
-if NB_CLASSES == 2:
-    last_dense = layers.Dense(units=1, activation="sigmoid")
-else:
-    last_dense = layers.Dense(units=NB_CLASSES, activation="softmax")
+# if NB_CLASSES == 2:
+#     last_dense = layers.Dense(units=1, activation="sigmoid")
+# else:
+#     last_dense = layers.Dense(units=NB_CLASSES, activation="softmax")
 
-bigram = layers.Conv1D(filters=NB_FILTERS, kernel_size=2, padding="valid", activation="relu")(embedding)
-trigram = layers.Conv1D(filters=NB_FILTERS, kernel_size=3, padding="valid", activation="relu")(embedding)
-quadgram = layers.Conv1D(filters=NB_FILTERS, kernel_size=4, padding="valid", activation="relu")(embedding)
-biconcat = pool()(bigram)
-triconcat = pool()(trigram)
-quadconcat = pool()(quadgram)
-concat = layers.Concatenate()([biconcat, triconcat, quadconcat])
-dense_1 = dense()(concat)
-dropout_1 = dropout()(dense_1)
-last_dense_1 = last_dense()(dropout_1)
-Dcnn = Model(input=embedding, output=last_dense_1)
+# embedding_1 = embedding(train_inputs)
+# bigram = layers.Conv1D(filters=NB_FILTERS, kernel_size=2, padding="valid", activation="relu")(embedding_1)
+# trigram = layers.Conv1D(filters=NB_FILTERS, kernel_size=3, padding="valid", activation="relu")(embedding_1)
+# quadgram = layers.Conv1D(filters=NB_FILTERS, kernel_size=4, padding="valid", activation="relu")(embedding_1)
+# biconcat = pool()(bigram)
+# triconcat = pool()(trigram)
+# quadconcat = pool()(quadgram)
+# concat = layers.Concatenate()([biconcat, triconcat, quadconcat])
+# dense_1 = dense()(concat)
+# dropout_1 = dropout()(dense_1)
+# last_dense_1 = last_dense()(dropout_1)
+# Dcnn = Model(input=embedding, output=last_dense_1)
 
 # Dcnn = tf.keras.models.Sequential()
 # Dcnn.add(embedding)
@@ -151,12 +153,12 @@ Dcnn = Model(input=embedding, output=last_dense_1)
 
 
 
-# Dcnn = DCNN(vocab_size=VOCAB_SIZE,
-#             emb_dim=EMB_DIM,
-#             nb_filters=NB_FILTERS,
-#             FFN_units=FFN_UNITS,
-#             nb_classes=NB_CLASSES,
-#             dropout_rate=DROPOUT_RATE)
+Dcnn = DCNN(vocab_size=VOCAB_SIZE,
+            emb_dim=EMB_DIM,
+            nb_filters=NB_FILTERS,
+            FFN_units=FFN_UNITS,
+            nb_classes=NB_CLASSES,
+            dropout_rate=DROPOUT_RATE)
 
 if NB_CLASSES == 2:
     Dcnn.compile(loss="binary_crossentropy",
@@ -190,11 +192,11 @@ Dcnn.fit(train_inputs,
          callbacks=[checkpoint_callback])
 ckpt_manager.save()
 
-Dcnn.save("smol_completed_model.h5")
+Dcnn.save("models/big_completed_model")
+converter = tf.lite.TFLiteConverter.from_saved_model("models/big_completed_model")
+tflite_model = converter.convert()
+open("models/converted_big_model.tflite", "wb").write(tflite_model)
+
 
 results = Dcnn.evaluate(test_inputs, test_labels, batch_size=BATCH_SIZE)
 print(results)
-
-print(Dcnn(np.array([tokenizer.encode("You are so funny")]), training=False).numpy())
-print(Dcnn(np.array([tokenizer.encode("You suck, go die in a hole")]), training=False).numpy())
-print(Dcnn(np.array([tokenizer.encode("Teaching an AI to love is pretty heartwarming")]), training=False).numpy())
