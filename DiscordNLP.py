@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import sys
 import discord
 import configparser
 import numpy as np
@@ -7,26 +8,32 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 
-# Initialize Discord client, config, trained CNN model, and vocabulary tokenizer
+# Initialize Discord client, config, vocabulary tokenizer and trained tflite model
 client = discord.Client()
 config = configparser.ConfigParser()
+
 try:
     config.read("config.txt")
 except:
     print("[!!] Error: config.txt could not be read. Fill out config_template.txt and rename it to config.txt.")
+    sys.exit(0)
+
 print("[*] Loading volcabulary tokenizer from: {0}".format(config["DEFAULT"]["tokenizer_path"]))
-with open(config["DEFAULT"]["tokenizer_path"], "rb") as f:
-    tokenizer = pickle.load(f)
+try:
+    with open(config["DEFAULT"]["tokenizer_path"], "rb") as f:
+        tokenizer = pickle.load(f)
+except:
+    print("[!!] Could not find tokenizer")
+    sys.exit(0)
 
-tokenizer = pickle.load(open("models/tokenizer.pickle", "rb"))
-interperter = tf.lite.Interpreter(model_path="models/converted_big_model.tflite")
-interperter.allocate_tensors()
-input_details = interperter.get_input_details()
-output_details = interperter.get_output_details()
-
-
-# async def cnn_response(text):
-#     TODO
+print("[*] Loading pre-trained tflite model")
+try:
+    interperter = tf.lite.Interpreter(model_path=config["DEFAULT"]["model_path"])
+    interperter.allocate_tensors()
+    input_details = interperter.get_input_details()
+    output_details = interperter.get_output_details()
+except:
+    print("[!!] Error loading tflite model")
 
 
 async def measure_sentiment(text):
@@ -42,7 +49,7 @@ async def measure_sentiment(text):
 
 @client.event
 async def on_ready():
-    print("[*] We have logged in as {0.user}".format(client))
+    print("[*] Logged in as {0.user}".format(client))
 
 
 @client.event
