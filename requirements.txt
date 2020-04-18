@@ -1,5 +1,8 @@
 discord
 configparser
 numpy
+pickle
+pandas
+jupyter
 tensorflow
 tensorflow_datasets
