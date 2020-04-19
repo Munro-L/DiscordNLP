@@ -27,23 +27,42 @@ except:
     sys.exit(0)
 
 print("[*] Loading pre-trained tflite model")
-try:
-    interperter = tf.lite.Interpreter(model_path=config["DEFAULT"]["model_path"])
-    interperter.allocate_tensors()
-    input_details = interperter.get_input_details()
-    output_details = interperter.get_output_details()
-except:
-    print("[!!] Error loading tflite model")
+tflite = False
+h5 = False
+if config["DEFAULT"]["model_path"].split(".")[-1] == "tflite":
+    try:
+        interperter = tf.lite.Interpreter(model_path=config["DEFAULT"]["model_path"])
+        interperter.allocate_tensors()
+        input_details = interperter.get_input_details()
+        output_details = interperter.get_output_details()
+        tflite = True
+    except:
+        print("[!!] Error loading tflite model")
+        sys.exit(0)
+elif config["DEFAULT"]["model_path"].split(".")[-1] == "h5":
+    try:
+        h5_model = tf.keras.models.load_model(config["DEFAULT"]["model_path"])
+        h5 = True
+    except:
+        print("[!!] Error loading h5 model")
+        sys.exit(0)
+else:
+    print("[!!] Saved model is not of supported type. Export as either .h5 or .tflite.")
+    sys.exit(0)
+
 
 
 async def measure_sentiment(text):
     tokenized_input = np.array([tokenizer.encode(text)], dtype=np.int32)
     tokenized_input = tf.keras.preprocessing.sequence.pad_sequences(
-        tokenized_input, value=0, padding="post", maxlen=73
+            tokenized_input, value=0, padding="post", maxlen=73
     )
-    interperter.set_tensor(input_details[0]["index"], tokenized_input)
-    interperter.invoke()
-    sentiment = interperter.get_tensor(output_details[0]["index"])
+    if tflite:
+        interperter.set_tensor(input_details[0]["index"], tokenized_input)
+        interperter.invoke()
+        sentiment = interperter.get_tensor(output_details[0]["index"])
+    elif h5:
+        sentiment = h5_model(tokenized_input, training=False).numpy()
     return sentiment
 
 

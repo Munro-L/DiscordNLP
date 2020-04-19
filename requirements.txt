@@ -2,6 +2,8 @@ discord
 configparser
 numpy
 pickle
+pyyaml
+h5py
 pandas
 jupyter
 tensorflow
