@@ -75,7 +75,7 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
-    elif message.content.startswith("$sentiment"):
+    elif message.content.startswith("$vibe_check"):
         async for x in message.channel.history(limit=2):
             target_message = x
         if target_message != None:
