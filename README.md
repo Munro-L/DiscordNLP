@@ -3,7 +3,7 @@ A Discord bot that uses neural network models to perform live natural language p
 
 ## Currently Available Commands
 
- - `$sentiment` -> The bot determine if the previous message had a positive or negative tone
+ - `$vibe_check` -> The bot determine if the previous message had a positive or negative tone
  - More coming soon
 
 ## Installation Setup
